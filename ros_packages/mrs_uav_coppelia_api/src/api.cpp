@@ -123,6 +123,8 @@ private:
 
   void publishRC(void);
 
+  void publishDistanceSensor(void);
+
   void timeoutInputs(void);
 };
 
@@ -159,6 +161,7 @@ void Api::initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_h
   param_loader.loadParam("input_mode/acceleration_hdg_rate", (bool&)_capabilities_.accepts_acceleration_hdg_rate_cmd);
   param_loader.loadParam("input_mode/velocity_hdg_rate", (bool&)_capabilities_.accepts_velocity_hdg_rate_cmd);
 
+  param_loader.loadParam("outputs/ground_truth", (bool&)_capabilities_.produces_ground_truth);
   param_loader.loadParam("outputs/distance_sensor", (bool&)_capabilities_.produces_distance_sensor);
   param_loader.loadParam("outputs/gnss", (bool&)_capabilities_.produces_gnss);
   param_loader.loadParam("outputs/imu", (bool&)_capabilities_.produces_imu);
@@ -566,6 +569,12 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
     common_handlers_->publishers.publishOdometry(*odom);
   }
 
+  // | ------------------ publish ground truth ------------------ |
+
+  if (_capabilities_.produces_ground_truth) {
+    common_handlers_->publishers.publishGroundTruth(*odom);
+  }
+
   // | ---------------------- publish gnss ---------------------- |
 
   if (_capabilities_.produces_gnss) {
@@ -650,6 +659,8 @@ void Api::timerMain([[maybe_unused]] const ros::TimerEvent& event) {
   publishBatteryState();
 
   publishRC();
+
+  publishDistanceSensor();
 }
 
 //}
@@ -695,6 +706,26 @@ void Api::publishRC(void) {
     rc.channels.push_back(0);
 
     common_handlers_->publishers.publishRcChannels(rc);
+  }
+}
+
+//}
+
+/* publishDistanceSensor() //{ */
+
+void Api::publishDistanceSensor(void) {
+
+  if (_capabilities_.produces_distance_sensor) {
+
+    sensor_msgs::Range msg;
+
+    msg.header.stamp = ros::Time::now();
+
+    msg.range     = -1;
+    msg.min_range = 0.1;
+    msg.max_range = 30;
+
+    common_handlers_->publishers.publishDistanceSensor(msg);
   }
 }
 

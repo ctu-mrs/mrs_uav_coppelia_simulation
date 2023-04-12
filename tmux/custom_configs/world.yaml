@@ -19,7 +19,7 @@ safety_area:
 
   use_safety_area: false
 
-  frame_name: "gps_origin"
+  frame_name: "world_origin"
 
   # convex polygon CCW
   safety_area: [-50, -50,

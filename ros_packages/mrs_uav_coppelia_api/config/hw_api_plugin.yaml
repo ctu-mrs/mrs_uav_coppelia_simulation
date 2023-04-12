@@ -15,18 +15,19 @@ input_mode:
   velocity_hdg_rate:     false
 
 outputs:
-  distance_sensor: false
-  gnss: true
-  imu: true
-  altitude: true
+  ground_truth:         true
+  distance_sensor:      true
+  gnss:                 true
+  imu:                  true
+  altitude:             true
   magnetometer_heading: true
-  rc_channels: false
-  battery_state: true
-  position: false
-  orientation: false
-  velocity: false
-  angular_velocity: false
-  odometry: true
+  rc_channels:          false
+  battery_state:        true
+  position:             true
+  orientation:          true
+  velocity:             true
+  angular_velocity:     true
+  odometry:             true
 
 topics:
   prefix: "coppelia_simulator"
