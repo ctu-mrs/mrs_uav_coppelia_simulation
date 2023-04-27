@@ -1,5 +1,9 @@
 # Coppelia Simulation
 
+## (potential) prerequsities
+
+pip3 install zmq
+
 ## Current state and potential TODOs
 
 We tried to adapt the Coppelia Sim into the MRS UAV System.
