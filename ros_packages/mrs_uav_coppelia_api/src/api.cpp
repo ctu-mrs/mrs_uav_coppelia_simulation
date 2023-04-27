@@ -30,12 +30,15 @@ class Api : public mrs_uav_hw_api::MrsUavHwApi {
 public:
   ~Api(){};
 
-  void initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_hw_api::CommonHandlers_t> common_handlers, const std::string& topic_prefix,
-                  const std::string& uav_name);
+  void initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_hw_api::CommonHandlers_t> common_handlers);
 
   // | ------------------------- params ------------------------- |
 
   mrs_msgs::HwApiCapabilities _capabilities_;
+
+  std::string _uav_name_;
+  std::string _world_frame_name_;
+  std::string _body_frame_name_;
 
   double      _utm_x_;
   double      _utm_y_;
@@ -136,12 +139,15 @@ private:
 
 /* initialize() //{ */
 
-void Api::initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_hw_api::CommonHandlers_t> common_handlers,
-                     [[maybe_unused]] const std::string& topic_prefix, [[maybe_unused]] const std::string& uav_name) {
+void Api::initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_hw_api::CommonHandlers_t> common_handlers) {
 
   ros::NodeHandle nh_(parent_nh);
 
   common_handlers_ = common_handlers;
+
+  _uav_name_         = common_handlers->getUavName();
+  _body_frame_name_  = common_handlers->getBodyFrameName();
+  _world_frame_name_ = common_handlers->getWorldFrameName();
 
   _capabilities_.api_name = "MrsSimulator";
 
@@ -202,42 +208,42 @@ void Api::initialize(const ros::NodeHandle& parent_nh, std::shared_ptr<mrs_uav_h
   shopts.queue_size         = 10;
   shopts.transport_hints    = ros::TransportHints().tcpNoDelay();
 
-  sh_odom_ =
-      mrs_lib::SubscribeHandler<nav_msgs::Odometry>(shopts, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_odom_, &Api::callbackOdom, this);
+  sh_odom_ = mrs_lib::SubscribeHandler<nav_msgs::Odometry>(shopts, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_odom_,
+                                                           &Api::callbackOdom, this);
 
   sh_imu_ =
-      mrs_lib::SubscribeHandler<sensor_msgs::Imu>(shopts, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_imu_, &Api::callbackImu, this);
+      mrs_lib::SubscribeHandler<sensor_msgs::Imu>(shopts, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_imu_, &Api::callbackImu, this);
 
   // | ----------------------- publishers ----------------------- |
 
   if (_capabilities_.accepts_actuator_cmd) {
     ph_actuators_cmd_ =
-        mrs_lib::PublisherHandler<mrs_msgs::HwApiActuatorCmd>(nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_actuators_cmd_, 1);
+        mrs_lib::PublisherHandler<mrs_msgs::HwApiActuatorCmd>(nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_actuators_cmd_, 1);
   }
 
   if (_capabilities_.accepts_control_group_cmd) {
     ph_control_group_cmd_ = mrs_lib::PublisherHandler<mrs_msgs::HwApiControlGroupCmd>(
-        nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_control_group_cmd_, 1);
+        nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_control_group_cmd_, 1);
   }
 
   if (_capabilities_.accepts_attitude_rate_cmd) {
     ph_attitude_rate_cmd_ = mrs_lib::PublisherHandler<mrs_msgs::HwApiAttitudeRateCmd>(
-        nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_attitude_rate_cmd_, 1);
+        nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_attitude_rate_cmd_, 1);
   }
 
   if (_capabilities_.accepts_attitude_cmd) {
     ph_attitude_cmd_ =
-        mrs_lib::PublisherHandler<mrs_msgs::HwApiAttitudeCmd>(nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_attitude_cmd_, 1);
+        mrs_lib::PublisherHandler<mrs_msgs::HwApiAttitudeCmd>(nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_attitude_cmd_, 1);
   }
 
   if (_capabilities_.accepts_acceleration_hdg_rate_cmd) {
     ph_acceleration_hdg_rate_cmd_ = mrs_lib::PublisherHandler<mrs_msgs::HwApiAccelerationHdgRateCmd>(
-        nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_acceleration_hdg_rate_cmd_, 1);
+        nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_acceleration_hdg_rate_cmd_, 1);
   }
 
   if (_capabilities_.accepts_velocity_hdg_rate_cmd) {
     ph_velocity_hdg_rate_cmd_ = mrs_lib::PublisherHandler<mrs_msgs::HwApiVelocityHdgRateCmd>(
-        nh_, "/" + _simulator_prefix_ + "/" + uav_name + "/" + _topic_simulator_velocity_hdg_rate_cmd_, 1);
+        nh_, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_velocity_hdg_rate_cmd_, 1);
   }
 
   // | ------------------------- timers ------------------------- |
@@ -519,8 +525,9 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
 
     geometry_msgs::PointStamped position;
 
-    position.header = odom->header;
-    position.point  = odom->pose.pose.position;
+    position.header.stamp    = odom->header.stamp;
+    position.header.frame_id = _uav_name_ + "/" + _world_frame_name_;
+    position.point           = odom->pose.pose.position;
 
     common_handlers_->publishers.publishPosition(position);
   }
@@ -531,8 +538,9 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
 
     geometry_msgs::QuaternionStamped orientation;
 
-    orientation.header     = odom->header;
-    orientation.quaternion = odom->pose.pose.orientation;
+    orientation.header.stamp    = odom->header.stamp;
+    orientation.header.frame_id = _uav_name_ + "/" + _world_frame_name_;
+    orientation.quaternion      = odom->pose.pose.orientation;
 
     common_handlers_->publishers.publishOrientation(orientation);
   }
@@ -544,7 +552,7 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
     geometry_msgs::Vector3Stamped velocity;
 
     velocity.header.stamp    = odom->header.stamp;
-    velocity.header.frame_id = odom->child_frame_id;
+    velocity.header.frame_id = _uav_name_ + "/" + _body_frame_name_;
     velocity.vector          = odom->twist.twist.linear;
 
     common_handlers_->publishers.publishVelocity(velocity);
@@ -557,7 +565,7 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
     geometry_msgs::Vector3Stamped angular_velocity;
 
     angular_velocity.header.stamp    = odom->header.stamp;
-    angular_velocity.header.frame_id = odom->child_frame_id;
+    angular_velocity.header.frame_id = _uav_name_ + "/" + _body_frame_name_;
     angular_velocity.vector          = odom->twist.twist.angular;
 
     common_handlers_->publishers.publishAngularVelocity(angular_velocity);
@@ -616,8 +624,9 @@ void Api::callbackOdom(mrs_lib::SubscribeHandler<nav_msgs::Odometry>& wrp) {
 
     mrs_msgs::Float64Stamped hdg;
 
-    hdg.header.stamp = ros::Time::now();
-    hdg.value        = heading;
+    hdg.header.stamp    = ros::Time::now();
+    hdg.header.frame_id = _uav_name_ + "/" + _world_frame_name_;
+    hdg.value           = heading;
 
     common_handlers_->publishers.publishMagnetometerHeading(hdg);
   }

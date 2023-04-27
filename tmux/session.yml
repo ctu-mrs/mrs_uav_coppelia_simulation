@@ -1,6 +1,6 @@
 name: uav
 root: ./
-pre_window: export UAV_NAME="uav1"; export RUN_TYPE=simulation; export UAV_TYPE=coppelia_quad; export WORLD_NAME=simulation; export SENSORS=""; export LOGGER_DEBUG=false; export DEBUG=false; export WORLD_FILE=./custom_configs/world.yaml
+pre_window: export UAV_NAME="uav1"; export RUN_TYPE=simulation; export UAV_TYPE=coppelia_quad; export WORLD_NAME=simulation; export SENSORS=""; export LOGGER_DEBUG=false; export DEBUG=false
 startup_window: status
 windows:
   - roscore:
