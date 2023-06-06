@@ -10,7 +10,7 @@ windows:
   - sim:
       layout: tiled
       panes:
-        - waitForRos; rosparam set use_sim_time true; ../coppelia_simulator/coppeliaSim.sh ../coppelia_resources/world.ttt
+        - waitForRos; rosparam set use_sim_time true; ../../coppelia_simulator/coppeliaSim.sh ../../coppelia_resources/uav_world.ttt
   - hw_api:
       layout: tiled
       panes:
