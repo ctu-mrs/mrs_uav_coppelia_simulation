@@ -1,6 +1,11 @@
-name: uav
+# do not modify these
 root: ./
-pre_window: export UAV_NAME="uav1"; export RUN_TYPE=simulation; export UAV_TYPE=coppelia_quad; export WORLD_NAME=simulation; export SENSORS=""; export LOGGER_DEBUG=false; export DEBUG=false
+name: simulation
+socket_name: mrs
+attach: false
+tmux_options: -f /etc/ctu-mrs/tmux.conf
+# you can modify these
+pre_window: export UAV_NAME="uav1"; export RUN_TYPE=simulation; export UAV_TYPE=x500
 startup_window: status
 windows:
   - roscore:
@@ -10,7 +15,7 @@ windows:
   - sim:
       layout: tiled
       panes:
-        - waitForRos; rosparam set use_sim_time true; ../../coppelia_simulator/coppeliaSim.sh ../../coppelia_resources/uav_world.ttt
+        - waitForRos; rosparam set use_sim_time true; ../coppelia_simulator/coppeliaSim.sh ../coppelia_resources/world.ttt
   - hw_api:
       layout: tiled
       panes:
@@ -18,7 +23,7 @@ windows:
   - control:
       layout: tiled
       panes:
-        - waitForHw; export UAV_NAME=uav1; roslaunch mrs_uav_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml config_active_estimators:=./custom_configs/active_estimators.yaml config_uav_manager:=./custom_configs/uav_manager.yaml
+        - waitForHw; export UAV_NAME=uav1; roslaunch mrs_uav_core core.launch platform_config:=`rospack find mrs_uav_coppelia_api`/config/mrs_uav_system/coppelia_quad.yaml custom_config:=./custom_configs/custom_config.yaml
   - status:
       layout: tiled
       panes:
@@ -30,6 +35,6 @@ windows:
   - rviz:
       layout: tiled
       panes:
-        - waitForControl; rosrun rviz rviz -d rviz.rviz
+        - waitForControl; roslaunch mrs_uav_core rviz.launch
         - waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
         - waitForControl; waitForControl; roslaunch mrs_rviz_plugins rviz_interface.launch
