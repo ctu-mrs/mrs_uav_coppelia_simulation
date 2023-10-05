@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1.2)
 project(mrs_uav_coppelia_api)
 
-find_package(catkin REQUIRED COMPONENTS
+set(CATKIN_DEPENDENCIES
   roscpp
   cmake_modules
   mrs_msgs
@@ -13,15 +13,19 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   )
 
+find_package(catkin REQUIRED COMPONENTS
+  ${CATKIN_DEPENDENCIES}
+  )
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(LIBRARIES
-  MrsUavHwCoppeliaApi
+  MrsUavHwCoppeliaApi_Api
   )
 
 catkin_package(
-  CATKIN_DEPENDS roscpp mrs_msgs sensor_msgs mrs_lib mrs_uav_hw_api geometry_msgs geometry_msgs
+  CATKIN_DEPENDS ${CATKIN_DEPENDENCIES}
   LIBRARIES ${LIBRARIES}
   )
 
@@ -31,16 +35,16 @@ include_directories(
 
 # Plugin
 
-add_library(MrsUavHwCoppeliaApi
+add_library(MrsUavHwCoppeliaApi_Api
   src/api.cpp
   )
 
-add_dependencies(MrsUavHwCoppeliaApi
+add_dependencies(MrsUavHwCoppeliaApi_Api
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
   )
 
-target_link_libraries(MrsUavHwCoppeliaApi
+target_link_libraries(MrsUavHwCoppeliaApi_Api
   ${catkin_LIBRARIES}
   ${Eigen_LIBRARIES}
   )
@@ -56,11 +60,10 @@ install(TARGETS ${LIBRARIES}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
   )
 
-install(DIRECTORY config
+install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   )
 
-install(DIRECTORY ./
+install(FILES plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  FILES_MATCHING PATTERN "*.xml"
   )

@@ -1,4 +1,4 @@
-<library path="lib/libMrsUavHwCoppeliaApi">
+<library path="lib/libMrsUavHwCoppeliaApi_Api">
   <class name="mrs_uav_coppelia_api/Api" type="mrs_uav_coppelia_api::Api" base_class_type="mrs_uav_hw_api::MrsUavHwApi">
     <description>CoppeliaSim API module for the MRS UAV System</description>
   </class>
