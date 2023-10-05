@@ -23,7 +23,7 @@
   <depend>geometry_msgs</depend>
   <depend>mrs_uav_hw_api</depend>
 
-  <depend>coppelia-sim-edu</depend>
+  <depend>python3-zmq</depend>
 
   <export>
     <mrs_uav_hw_api plugin="${prefix}/plugins.xml" />
