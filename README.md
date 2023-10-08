@@ -1,9 +1,5 @@
 # Coppelia Simulation
 
-## (potential) prerequsities
-
-pip3 install zmq
-
 ## Current state and potential TODOs
 
 We tried to adapt the Coppelia Sim into the MRS UAV System.
@@ -19,17 +15,14 @@ Therefore, this solution struggles to reach real-time factor 1.0 even with a sin
 
 ## Contents for this repository
 
-- The folder `./coppelia_simulator` is dedicated to the Coppelia simulator.
 - The folder `./coppelia_resources` contains the Coppelia _scene_ file, the `controller.py` for the embedded UAV controller, and the `clock.py` for the ROS clock publisher. These two scripts are parts of the _customization_ scripts included in the scene.
 - The folder `./ros_packages` contains the [API Plugin](https://github.com/ctu-mrs/mrs_uav_hw_api) that interfaces the simulator to the [MRS UAV System](https://github.com/ctu-mrs/mrs_uav_system).
 
 ## How To Start
 
-1. Download coppelia simulator from [downloads](https://www.coppeliarobotics.com/downloads) and unpack it into the `./coppelia_simulator` subfolder.
-2. Build this repository in a ROS workspace alongside the [UAV Core](https://github.com/ctu-mrs/uav_core).
-3. Start `./tmux/start.sh`.
+Start the Tmuxinator session in `./tmux/start.sh`.
 
-# Binding custom scripts from the scene
+# (Development remarksa) Binding custom scripts from the scene
 
 ## UAV control script
 
@@ -49,7 +42,7 @@ include controller
 include clock
 ```
 
-# Other remarks
+## Other remarks
 
 The binding callback for the dynamics step does not work when following official tutorials.
 The [tutorial](https://www.coppeliarobotics.com/helpFiles/en/dynCallbackFunctions.htm) refers to a version of API that has yet to be implemented (yet) or does not work.
