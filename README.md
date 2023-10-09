@@ -22,7 +22,7 @@ Therefore, this solution struggles to reach real-time factor 1.0 even with a sin
 
 Start the Tmuxinator session in `./mrs_uav_coppelia_simulation/tmux`.
 
-# (Development remarksa) Binding custom scripts from the scene
+# (Development remarks) Binding custom scripts from the scene
 
 ## UAV control script
 
