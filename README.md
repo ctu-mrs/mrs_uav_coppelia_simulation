@@ -1,5 +1,13 @@
 # Coppelia Simulation
 
+## Installation
+
+1. Download the Coppelia EDU simulator and extract it to `/opt/coppelia-sim-edu`
+2. Install the MRS Coppelia pack
+```bash
+sudo apt install ros-noetic-mrs-uav-coppelia-simulation
+```
+
 ## Current state and potential TODOs
 
 We tried to adapt the Coppelia Sim into the MRS UAV System.
