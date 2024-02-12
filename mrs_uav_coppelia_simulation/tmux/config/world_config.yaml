@@ -7,7 +7,7 @@ world_origin:
 
 safety_area:
 
-  enabled: true
+  enabled: false
 
   horizontal:
 
@@ -31,4 +31,4 @@ safety_area:
     frame_name: "world_origin"
 
     max_z: 15.0
-    min_z: 0.5
+    min_z: -2.0
