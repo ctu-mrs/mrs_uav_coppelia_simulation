@@ -1,69 +1,83 @@
-cmake_minimum_required(VERSION 3.1.2)
+cmake_minimum_required(VERSION 3.20.0)
 project(mrs_uav_coppelia_api)
 
-set(CATKIN_DEPENDENCIES
-  roscpp
-  cmake_modules
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 1 == use rclcpp::Timer implementation
+# 0 == use MRS's thread timer implementation
+set(USE_ROS_TIMER 0)
+
+if(${USE_ROS_TIMER})
+  MESSAGE(WARNING "[mrs_uav_coppelia_api]: Compiling with ROS Timers. This can cause high CPU load in runtime.")
+endif()
+
+set(DEPENDENCIES
+  rclcpp
+  pluginlib
+  mrs_lib
+  mrs_uav_hw_api
   mrs_msgs
   nav_msgs
   geometry_msgs
   sensor_msgs
-  mrs_lib
-  mrs_uav_hw_api
-  geometry_msgs
-  )
+)
 
-find_package(catkin REQUIRED COMPONENTS
-  ${CATKIN_DEPENDENCIES}
-  )
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+foreach(DEP IN LISTS DEPENDENCIES)
+  find_package(${DEP} REQUIRED)
+endforeach()
 
 set(LIBRARIES
   MrsUavHwCoppeliaApi_Api
-  )
-
-catkin_package(
-  CATKIN_DEPENDS ${CATKIN_DEPENDENCIES}
-  LIBRARIES ${LIBRARIES}
-  )
-
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  )
+)
 
 # Plugin
 
 add_library(MrsUavHwCoppeliaApi_Api
   src/api.cpp
-  )
-
-add_dependencies(MrsUavHwCoppeliaApi_Api
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-  )
+)
 
 target_link_libraries(MrsUavHwCoppeliaApi_Api
-  ${catkin_LIBRARIES}
-  ${Eigen_LIBRARIES}
-  )
+  PRIVATE
+    rclcpp::rclcpp
+    pluginlib::pluginlib
+    mrs_lib::mrs_lib
+    mrs_uav_hw_api::mrs_uav_hw_api
+    ${mrs_msgs_TARGETS}
+    ${nav_msgss_TARGETS}
+    ${geometry_msgs_TARGETS}
+    ${sensor_msgs_TARGETS}
+)
 
+pluginlib_export_plugin_description_file(mrs_uav_hw_api plugins.xml)
+
+target_compile_definitions(MrsUavHwCoppeliaApi_Api PRIVATE USE_ROS_TIMER=${USE_ROS_TIMER})
 
 ## --------------------------------------------------------------
 ## |                           Install                          |
 ## --------------------------------------------------------------
 
-install(TARGETS ${LIBRARIES}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-  )
+install(TARGETS ${LIBRARIES} EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 install(DIRECTORY launch config
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  )
+  DESTINATION share/${PROJECT_NAME}
+)
 
-install(FILES plugins.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  )
+ament_export_targets(
+  export_${PROJECT_NAME} HAS_LIBRARY_TARGET
+)
+
+ament_export_libraries(
+  ${LIBRARIES}
+)
+
+ament_export_dependencies(
+  ${DEPENDENCIES}
+)
+
+ament_package()
