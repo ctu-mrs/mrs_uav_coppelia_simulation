@@ -168,7 +168,8 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
 
   // | ------------------- loading parameters ------------------- |
 
-  mrs_lib::ParamLoader param_loader(node_, "MrsUavHwApi");
+  auto &param_loader = *common_handlers->main_param_loader;
+  param_loader.setPrefix("plugin/");
 
   param_loader.loadParam("gnss/utm_x", _utm_x_);
   param_loader.loadParam("gnss/utm_y", _utm_y_);

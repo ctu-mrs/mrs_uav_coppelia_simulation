@@ -1,18 +1,10 @@
-import rospy
-import rosnode
+# CoppeliaSim child script - UAV controller
+# Loaded as an embedded Python script in the CoppeliaSim scene.
+# Uses the simROS2 plugin API (not rclpy directly).
+# Messages are plain Python dicts matching ROS2 message structures.
 
 import numpy as np
-
-from mrs_msgs.msg import HwApiActuatorCmd as HwApiActuatorCmd
-from mrs_msgs.msg import HwApiControlGroupCmd as HwApiControlGroupCmd
-from mrs_msgs.msg import HwApiAttitudeRateCmd as HwApiAttitudeRateCmd
-from mrs_msgs.msg import HwApiAttitudeCmd as HwApiAttitudeCmd
-from mrs_msgs.msg import HwApiAccelerationHdgRateCmd as HwApiAccelerationHdgRateCmd
-from mrs_msgs.msg import HwApiVelocityHdgRateCmd as HwApiVelocityHdgRateCmd
-from sensor_msgs.msg import Imu as Imu
-from nav_msgs.msg import Odometry as Odometry
-
-from tf.transformations import quaternion_matrix
+import math
 from scipy.spatial.transform import Rotation as R
 
 # #{ PID
@@ -50,22 +42,23 @@ class Controller:
 
     # #{ init()
 
-    def __init__(self):
+    def __init__(self, sim, simROS2):
 
-        rospy.init_node('coppelia_wrapper', anonymous=True)
+        self.sim = sim
+        self.simROS2 = simROS2
 
         self.uav_handle = sim.getObject('.')
 
-        self.uav_name = sim.getObjectName(self.uav_handle).split("#")[0]
+        self.uav_name = sim.getObjectAlias(self.uav_handle, 1).split("#")[0]
 
-        topic_prefix = '/coppelia_simulator/'+self.uav_name+'/'
+        topic_prefix = '/coppelia_simulator/' + self.uav_name + '/'
 
         print("topic_prefix: {}".format(topic_prefix))
 
-        self.propellerHandles = [sim.getObject('/'+self.uav_name+'/propeller[3]/respondable'),
-                                 sim.getObject('/'+self.uav_name+'/propeller[1]/respondable'),
-                                 sim.getObject('/'+self.uav_name+'/propeller[0]/respondable'),
-                                 sim.getObject('/'+self.uav_name+'/propeller[2]/respondable')]
+        self.propellerHandles = [sim.getObject('/' + self.uav_name + '/propeller[3]/respondable'),
+                                 sim.getObject('/' + self.uav_name + '/propeller[1]/respondable'),
+                                 sim.getObject('/' + self.uav_name + '/propeller[0]/respondable'),
+                                 sim.getObject('/' + self.uav_name + '/propeller[2]/respondable')]
 
         self.attitude_rate = [0.0, 0.0, 0.0]
         self.vel_body = np.array([0, 0, 0])
@@ -104,7 +97,7 @@ class Controller:
         ## | ------------------------ dynamics ------------------------ |
 
         propeller_mass = sim.getShapeMass(self.propellerHandles[0])
-        self.uav_mass = sim.getShapeMass(self.uav_handle) + 4*propeller_mass
+        self.uav_mass = sim.getShapeMass(self.uav_handle) + 4 * propeller_mass
 
         print("self.uav_mass: {}".format(self.uav_mass))
 
@@ -132,17 +125,40 @@ class Controller:
 
         ## | ----------------------- subscribers ---------------------- |
 
-        self.sub_actuator_cmd              = rospy.Subscriber(topic_prefix+'actuator_cmd', HwApiActuatorCmd, self.callbackActuatorCmd, queue_size                                 = 1)
-        self.sub_control_group_cmd         = rospy.Subscriber(topic_prefix+'control_group_cmd', HwApiControlGroupCmd, self.callbackControlGroupCmd, queue_size                        = 1)
-        self.sub_attitude_rate_cmd         = rospy.Subscriber(topic_prefix+'attitude_rate_cmd', HwApiAttitudeRateCmd, self.callbackAttitudeRateCmd, queue_size                    = 1)
-        self.sub_attitude_cmd              = rospy.Subscriber(topic_prefix+'attitude_cmd', HwApiAttitudeCmd, self.callbackAttitudeCmd, queue_size                                 = 1)
-        self.sub_acceleration_hdg_rate_cmd = rospy.Subscriber(topic_prefix+'acceleration_hdg_rate_cmd', HwApiAccelerationHdgRateCmd, self.callbackAccelerationHdgRateCmd, queue_size = 1)
-        self.sub_velocity_hdg_rate_cmd = rospy.Subscriber(topic_prefix+'velocity_hdg_rate_cmd', HwApiVelocityHdgRateCmd, self.callbackVelocityHdgRateCmd, queue_size = 1)
+        self.sub_actuator_cmd = simROS2.createSubscription(
+            topic_prefix + 'actuator_cmd',
+            'mrs_msgs/msg/HwApiActuatorCmd',
+            self.callbackActuatorCmd)
+
+        self.sub_control_group_cmd = simROS2.createSubscription(
+            topic_prefix + 'control_group_cmd',
+            'mrs_msgs/msg/HwApiControlGroupCmd',
+            self.callbackControlGroupCmd)
+
+        self.sub_attitude_rate_cmd = simROS2.createSubscription(
+            topic_prefix + 'attitude_rate_cmd',
+            'mrs_msgs/msg/HwApiAttitudeRateCmd',
+            self.callbackAttitudeRateCmd)
+
+        self.sub_attitude_cmd = simROS2.createSubscription(
+            topic_prefix + 'attitude_cmd',
+            'mrs_msgs/msg/HwApiAttitudeCmd',
+            self.callbackAttitudeCmd)
+
+        self.sub_acceleration_hdg_rate_cmd = simROS2.createSubscription(
+            topic_prefix + 'acceleration_hdg_rate_cmd',
+            'mrs_msgs/msg/HwApiAccelerationHdgRateCmd',
+            self.callbackAccelerationHdgRateCmd)
+
+        self.sub_velocity_hdg_rate_cmd = simROS2.createSubscription(
+            topic_prefix + 'velocity_hdg_rate_cmd',
+            'mrs_msgs/msg/HwApiVelocityHdgRateCmd',
+            self.callbackVelocityHdgRateCmd)
 
         ## | ----------------------- publishers ----------------------- |
 
-        self.publisher_odom = rospy.Publisher(topic_prefix+'odometry', Odometry, queue_size=1)
-        self.publisher_imu = rospy.Publisher(topic_prefix+'imu', Imu, queue_size=1)
+        self.publisher_odom = simROS2.createPublisher(topic_prefix + 'odometry', 'nav_msgs/msg/Odometry')
+        self.publisher_imu  = simROS2.createPublisher(topic_prefix + 'imu', 'sensor_msgs/msg/Imu')
 
     # #} end of init()
 
@@ -164,7 +180,7 @@ class Controller:
 
     def getSensorData(self, dt):
 
-        self.object_matrix = sim.getObjectMatrix(self.uav_handle, sim.handle_world)
+        self.object_matrix = self.sim.getObjectMatrix(self.uav_handle, self.sim.handle_world)
 
         # current orientation
         self.pose, self.R = self.decodeMatrix(self.object_matrix)
@@ -176,18 +192,16 @@ class Controller:
             return
 
         # calculate the angular rate
-        omega = self.R.transpose().dot((self.R-self.last_R)/dt)
-        self.attitude_rate=np.array([omega[2][1], omega[0][2], omega[1][0]])
+        omega = self.R.transpose().dot((self.R - self.last_R) / dt)
+        self.attitude_rate = np.array([omega[2][1], omega[0][2], omega[1][0]])
 
-        vel_world = (self.pose - self.last_pose)/dt
+        vel_world = (self.pose - self.last_pose) / dt
         self.vel_body = self.R.transpose().dot(vel_world)
 
         self.last_R = self.R
         self.last_pose = self.pose
 
-        ## | --------------------- propeller poses -------------------- |
-
-    # #} end of calculateVelocities()
+    # #} end of getSensorData()
 
     # #{ lowLevelControl()
 
@@ -195,19 +209,19 @@ class Controller:
 
         ## | ------------------------- control ------------------------ |
 
-        if self.acceleration_hdg_rate_cmd != None:
+        if self.acceleration_hdg_rate_cmd is not None:
 
             des_tilt, des_hdg_rate, des_throttle = self.accelerationController(self.acceleration_hdg_rate_cmd)
 
             self.attitude_rate_cmd = self.tiltHdgRateController(des_tilt, des_hdg_rate, des_throttle)
 
-        if self.attitude_cmd != None:
+        if self.attitude_cmd is not None:
             self.attitude_rate_cmd = self.attitudeController(self.attitude_cmd)
 
-        if self.attitude_rate_cmd != None:
+        if self.attitude_rate_cmd is not None:
             self.control_group_cmd = self.attitudeRateController(self.attitude_rate_cmd)
 
-        if self.control_group_cmd != None:
+        if self.control_group_cmd is not None:
             self.actuator_cmd = self.mixer(self.control_group_cmd)
 
     # #} end of lowLevelControl()
@@ -218,7 +232,7 @@ class Controller:
 
         ## | ------------------------- control ------------------------ |
 
-        if self.velocity_hdg_rate_cmd != None:
+        if self.velocity_hdg_rate_cmd is not None:
 
             self.acceleration_hdg_rate_cmd = self.velocityController(self.velocity_hdg_rate_cmd, dt)
 
@@ -233,10 +247,10 @@ class Controller:
             propellerHandle = self.propellerHandles[i]
 
             rotDir = self.rotor_dirs[i]
-            prop_force = self.R.dot(np.array([0, 0, self.force_torque_multiplier*forces[i]]))
-            prop_torque = self.R.dot(np.array([0, 0, self.force_torque_multiplier*rotDir*torques[i]]))
+            prop_force = self.R.dot(np.array([0, 0, self.force_torque_multiplier * forces[i]]))
+            prop_torque = self.R.dot(np.array([0, 0, self.force_torque_multiplier * rotDir * torques[i]]))
 
-            sim.addForceAndTorque(propellerHandle, prop_force.tolist(), prop_torque.tolist())
+            self.sim.addForceAndTorque(propellerHandle, prop_force.tolist(), prop_torque.tolist())
 
     # #} end of applyForceOnPropellers()
 
@@ -250,12 +264,12 @@ class Controller:
         forces = [0, 0, 0, 0]
         torques = [0, 0, 0, 0]
 
-        for i in range(0, len(self.actuator_cmd.motors)):
-            rpm = self.actuator_cmd.motors[i]*(self.rpm_max - self.rpm_min) + self.rpm_min
-            forces[i] = self.force_constant*rpm*rpm
-            torques[i] = self.torque_constant*forces[i]
+        motors = self.actuator_cmd['motors']
 
-        total_g = np.sum(forces)/9.81
+        for i in range(0, len(motors)):
+            rpm = motors[i] * (self.rpm_max - self.rpm_min) + self.rpm_min
+            forces[i] = self.force_constant * rpm * rpm
+            torques[i] = self.torque_constant * forces[i]
 
         self.applyForceOnPropellers(forces, torques)
 
@@ -267,11 +281,11 @@ class Controller:
 
         self.uav_inertia = np.eye(3)
 
-        self.uav_inertia[0, 0] = self.uav_mass * (3.0 * self.arm_length * self.arm_length + self.body_height * self.body_height) / 12.0;
-        self.uav_inertia[1, 1] = self.uav_mass * (3.0 * self.arm_length * self.arm_length + self.body_height * self.body_height) / 12.0;
-        self.uav_inertia[2, 2] = (self.uav_mass * self.arm_length * self.arm_length) / 2.0;
+        self.uav_inertia[0, 0] = self.uav_mass * (3.0 * self.arm_length * self.arm_length + self.body_height * self.body_height) / 12.0
+        self.uav_inertia[1, 1] = self.uav_mass * (3.0 * self.arm_length * self.arm_length + self.body_height * self.body_height) / 12.0
+        self.uav_inertia[2, 2] = (self.uav_mass * self.arm_length * self.arm_length) / 2.0
 
-    # #} end of getInertia()
+    # #} end of calculateInertia()
 
     # #{ setAccelerationCmd()
 
@@ -301,35 +315,49 @@ class Controller:
 
     def publishOdometry(self, time):
 
-        ## Assemble odometry_msg
-        odometry_msg = Odometry()
-
-        # odometry_msg.header.stamp = rospy.Time.now()
-        odometry_msg.header.stamp = rospy.Time.from_sec(time)
-        odometry_msg.header.frame_id = "world"
-        odometry_msg.child_frame_id = "fcu"
-
-        odometry_msg.pose.pose.position.x = self.pose[0]
-        odometry_msg.pose.pose.position.y = self.pose[1]
-        odometry_msg.pose.pose.position.z = self.pose[2]
-
         r = R.from_matrix(self.R)
-        q = r.as_quat()
+        q = r.as_quat()  # [x, y, z, w]
 
-        odometry_msg.pose.pose.orientation.x = q[0]
-        odometry_msg.pose.pose.orientation.y = q[1]
-        odometry_msg.pose.pose.orientation.z = q[2]
-        odometry_msg.pose.pose.orientation.w = q[3]
+        t = self.simROS2.timeFromFloat(time)
 
-        odometry_msg.twist.twist.angular.x = self.attitude_rate[0]
-        odometry_msg.twist.twist.angular.y = self.attitude_rate[1]
-        odometry_msg.twist.twist.angular.z = self.attitude_rate[2]
+        odometry_msg = {
+            'header': {
+                'stamp': t,
+                'frame_id': 'world',
+            },
+            'child_frame_id': 'fcu',
+            'pose': {
+                'pose': {
+                    'position': {
+                        'x': float(self.pose[0]),
+                        'y': float(self.pose[1]),
+                        'z': float(self.pose[2]),
+                    },
+                    'orientation': {
+                        'x': float(q[0]),
+                        'y': float(q[1]),
+                        'z': float(q[2]),
+                        'w': float(q[3]),
+                    },
+                },
+            },
+            'twist': {
+                'twist': {
+                    'linear': {
+                        'x': float(self.vel_body[0]),
+                        'y': float(self.vel_body[1]),
+                        'z': float(self.vel_body[2]),
+                    },
+                    'angular': {
+                        'x': float(self.attitude_rate[0]),
+                        'y': float(self.attitude_rate[1]),
+                        'z': float(self.attitude_rate[2]),
+                    },
+                },
+            },
+        }
 
-        odometry_msg.twist.twist.linear.x = self.vel_body[0]
-        odometry_msg.twist.twist.linear.y = self.vel_body[1]
-        odometry_msg.twist.twist.linear.z = self.vel_body[2]
-
-        self.publisher_odom.publish(odometry_msg)
+        self.simROS2.publish(self.publisher_odom, odometry_msg)
 
     # #} end of publishOdometry()
 
@@ -337,20 +365,34 @@ class Controller:
 
     def publishImu(self, time):
 
-        ## Assemble odometry_msg
-        imu_msg = Imu()
+        t = self.simROS2.timeFromFloat(time)
 
-        # odometry_msg.header.stamp = rospy.Time.now()
-        imu_msg.header.stamp = rospy.Time.from_sec(time)
-        imu_msg.header.frame_id = "fcu"
+        imu_msg = {
+            'header': {
+                'stamp': t,
+                'frame_id': 'fcu',
+            },
+            'angular_velocity': {
+                'x': float(self.attitude_rate[0]),
+                'y': float(self.attitude_rate[1]),
+                'z': float(self.attitude_rate[2]),
+            },
+            'linear_acceleration': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0,
+            },
+            'orientation': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0,
+                'w': 1.0,
+            },
+        }
 
-        imu_msg.angular_velocity.x = self.attitude_rate[0]
-        imu_msg.angular_velocity.y = self.attitude_rate[1]
-        imu_msg.angular_velocity.z = self.attitude_rate[2]
+        self.simROS2.publish(self.publisher_imu, imu_msg)
 
-        self.publisher_imu.publish(imu_msg)
-
-    # #} end of publishOdometry()
+    # #} end of publishImu()
 
 # --------------------------------------------------------------
 # |                     controller methods                     |
@@ -360,7 +402,8 @@ class Controller:
 
     def velocityController(self, velocity_hdg_rate_cmd, dt):
 
-        des_vel = np.array([velocity_hdg_rate_cmd.velocity.x, velocity_hdg_rate_cmd.velocity.y, velocity_hdg_rate_cmd.velocity.z])
+        vel = velocity_hdg_rate_cmd['velocity']
+        des_vel = np.array([vel['x'], vel['y'], vel['z']])
         cur_vel = self.R.dot(self.vel_body)
 
         action_x = self.pid_vel_x.control(des_vel[0], cur_vel[0], dt)
@@ -369,15 +412,10 @@ class Controller:
 
         ## | ------------------------- output ------------------------- |
 
-        accceleration_hdg_rate_cmd = HwApiAccelerationHdgRateCmd()
-
-        accceleration_hdg_rate_cmd.acceleration.x = action_x
-        accceleration_hdg_rate_cmd.acceleration.y = action_y
-        accceleration_hdg_rate_cmd.acceleration.z = action_z
-
-        accceleration_hdg_rate_cmd.heading_rate = velocity_hdg_rate_cmd.heading_rate
-
-        return accceleration_hdg_rate_cmd
+        return {
+            'acceleration': {'x': action_x, 'y': action_y, 'z': action_z},
+            'heading_rate': velocity_hdg_rate_cmd['heading_rate'],
+        }
 
     # #} end of velocityController()
 
@@ -387,12 +425,12 @@ class Controller:
 
         ## | ---------------------- extract data ---------------------- |
 
-        des_hdg_rate = acceleration_hdg_rate_cmd.heading_rate
-        des_acc = acceleration_hdg_rate_cmd.acceleration
+        des_hdg_rate = acceleration_hdg_rate_cmd['heading_rate']
+        des_acc = acceleration_hdg_rate_cmd['acceleration']
 
         ## | ------------------------- control ------------------------ |
 
-        des_force = np.array([des_acc.x, des_acc.y, des_acc.z + 9.81])*self.uav_mass
+        des_force = np.array([des_acc['x'], des_acc['y'], des_acc['z'] + 9.81]) * self.uav_mass
 
         des_F_scalar = des_force.dot(self.R[:, 2]) / 4.0
 
@@ -439,26 +477,29 @@ class Controller:
 
         ## | -------------------- extract the data -------------------- |
 
-        des_R = quaternion_matrix([attitude_cmd.orientation.x, attitude_cmd.orientation.y, attitude_cmd.orientation.z, attitude_cmd.orientation.w])[0:3,0:3]
+        ori = attitude_cmd['orientation']
+        q = [ori['x'], ori['y'], ori['z'], ori['w']]
+        des_R = R.from_quat(q).as_matrix()
 
         ## | ------------------------- control ------------------------ |
 
         R_error = 0.5 * (des_R.transpose().dot(self.R) - self.R.transpose().dot(des_R))
-        R_error_vec = np.array([(R_error[1, 2]-R_error[2, 1])/2.0, (R_error[2, 0]-R_error[0, 2])/2.0, (R_error[0, 1]-R_error[1, 0])/2.0])
+        R_error_vec = np.array([(R_error[1, 2] - R_error[2, 1]) / 2.0,
+                                 (R_error[2, 0] - R_error[0, 2]) / 2.0,
+                                 (R_error[0, 1] - R_error[1, 0]) / 2.0])
 
         des_rate = np.multiply(R_error_vec, self.attitude_gains)
 
         ## | ------------------ construct the output ------------------ |
 
-        attitude_rate_cmd = HwApiAttitudeRateCmd()
-
-        attitude_rate_cmd.body_rate.x = des_rate[0]
-        attitude_rate_cmd.body_rate.y = des_rate[1]
-        attitude_rate_cmd.body_rate.z = des_rate[2]
-
-        attitude_rate_cmd.throttle = attitude_cmd.throttle
-
-        return attitude_rate_cmd
+        return {
+            'body_rate': {
+                'x': float(des_rate[0]),
+                'y': float(des_rate[1]),
+                'z': float(des_rate[2]),
+            },
+            'throttle': attitude_cmd['throttle'],
+        }
 
     # #} end of attitudeController()
 
@@ -479,22 +520,23 @@ class Controller:
         ## | ------------------------- control ------------------------ |
 
         R_error = 0.5 * (des_R.transpose().dot(self.R) - self.R.transpose().dot(des_R))
-        R_error_vec = np.array([R_error[1, 2]-R_error[2, 1], R_error[2, 0]-R_error[0, 2], R_error[0, 1]-R_error[1, 0]]) * 0.5
+        R_error_vec = np.array([R_error[1, 2] - R_error[2, 1],
+                                 R_error[2, 0] - R_error[0, 2],
+                                 R_error[0, 1] - R_error[1, 0]]) * 0.5
 
         # TODO the heading rate should be converted to the intrinsic yaw rate
         des_rate = np.multiply(R_error_vec, self.attitude_gains) + np.array([0, 0, hdg_rate])
 
         ## | ------------------ construct the output ------------------ |
 
-        attitude_rate_cmd = HwApiAttitudeRateCmd()
-
-        attitude_rate_cmd.body_rate.x = des_rate[0]
-        attitude_rate_cmd.body_rate.y = des_rate[1]
-        attitude_rate_cmd.body_rate.z = des_rate[2]
-
-        attitude_rate_cmd.throttle = throttle
-
-        return attitude_rate_cmd
+        return {
+            'body_rate': {
+                'x': float(des_rate[0]),
+                'y': float(des_rate[1]),
+                'z': float(des_rate[2]),
+            },
+            'throttle': float(throttle),
+        }
 
     # #} end of tiltHdgRateController()
 
@@ -504,8 +546,9 @@ class Controller:
 
         ## | -------------------- extract the data -------------------- |
 
-        des_rate = np.array([attitude_rate_cmd.body_rate.x, attitude_rate_cmd.body_rate.y, attitude_rate_cmd.body_rate.z])
-        des_throttle = attitude_rate_cmd.throttle
+        rate = attitude_rate_cmd['body_rate']
+        des_rate = np.array([rate['x'], rate['y'], rate['z']])
+        des_throttle = attitude_rate_cmd['throttle']
 
         ## | ------------------------- control ------------------------ |
 
@@ -519,16 +562,14 @@ class Controller:
 
         ## | ------------------- prepare the output ------------------- |
 
-        control_group_cmd = HwApiControlGroupCmd()
+        return {
+            'roll':     float(action[0]),
+            'pitch':    float(action[1]),
+            'yaw':      float(action[2]),
+            'throttle': float(des_throttle),
+        }
 
-        control_group_cmd.roll     = action[0]
-        control_group_cmd.pitch    = action[1]
-        control_group_cmd.yaw      = action[2]
-        control_group_cmd.throttle = des_throttle
-
-        return control_group_cmd
-
-    # #} end of rateController()
+    # #} end of attitudeRateController()
 
     # #{ mixer()
 
@@ -536,7 +577,12 @@ class Controller:
 
         ## | -------------------- decode the input -------------------- |
 
-        ctrl_groups = np.array([control_group_cmd.roll, control_group_cmd.pitch, control_group_cmd.yaw, control_group_cmd.throttle])
+        ctrl_groups = np.array([
+            control_group_cmd['roll'],
+            control_group_cmd['pitch'],
+            control_group_cmd['yaw'],
+            control_group_cmd['throttle'],
+        ])
 
         motors = self.allocation_matrix.dot(ctrl_groups)
 
@@ -553,7 +599,7 @@ class Controller:
 
             if ctrl_groups[3] > 0.05:
                 for i in range(0, 3):
-                    ctrl_groups[i] = ctrl_groups[i] / (np.mean(motors) / ctrl_groups[3]);
+                    ctrl_groups[i] = ctrl_groups[i] / (np.mean(motors) / ctrl_groups[3])
 
                 motors = self.allocation_matrix.dot(ctrl_groups)
 
@@ -562,12 +608,7 @@ class Controller:
 
         ## | ------------------- prepare the output ------------------- |
 
-        actuators = HwApiActuatorCmd()
-
-        for i in range(0, len(motors)):
-            actuators.motors.append(motors[i])
-
-        return actuators
+        return {'motors': [float(m) for m in motors]}
 
     # #} end of mixer()
 
@@ -651,46 +692,41 @@ class Controller:
         # self.acceleration_hdg_rate_cmd = None
         self.velocity_hdg_rate_cmd     = msg
 
-    # #} end of callbackAccelerationHdgRateCmd()
+    # #} end of callbackVelocityHdgRateCmd()
 
 # --------------------------------------------------------------
 # |                     Coppelia callbacks                     |
 # --------------------------------------------------------------
 
-# #{ syscall_dynCallback()
+# #{ sysCall_dynCallback()
 
 def sysCall_dynCallback(data):
-
-    global controller
 
     dt = data['dt']
     n_passes = float(data['totalPasses'])
     multiplier = 1.0 / n_passes
 
-    controller.setForceTorqueMultiplier(multiplier)
+    self.controller.setForceTorqueMultiplier(multiplier)
 
     if not data['afterStep']:
 
-      controller.getSensorData(dt)
+        self.controller.getSensorData(dt)
 
-      controller.lowLevelControl()
+        self.controller.lowLevelControl()
 
-    controller.applyMotorSignals()
+    self.controller.applyMotorSignals()
 
-# #} end of syscall_dynCallback()
+# #} end of sysCall_dynCallback()
 
 # #{ sysCall_actuation()
 
 def sysCall_actuation():
 
-    global controller
-    global last_actuation_time
+    current_time = self.sim.getSimulationTime()
+    dt = current_time - self.last_actuation_time
+    self.last_actuation_time = current_time
 
-    current_time = sim.getSimulationTime()
-    dt = current_time - last_actuation_time
-    last_actuation_time = current_time
-
-    controller.highLevelControl(dt)
+    self.controller.highLevelControl(dt)
 
 # #} end of sysCall_actuation()
 
@@ -698,12 +734,10 @@ def sysCall_actuation():
 
 def sysCall_sensing():
 
-    global controller
+    t = self.sim.getSimulationTime()
 
-    t = sim.getSimulationTime()
-
-    controller.publishImu(t)
-    controller.publishOdometry(t)
+    self.controller.publishImu(t)
+    self.controller.publishOdometry(t)
 
 # #} end of sysCall_sensing()
 
@@ -713,11 +747,15 @@ def sysCall_init():
 
     print("initializing controller")
 
-    global controller
-    controller = Controller()
+    sim = require('sim')
+    simROS2 = require('simROS2')
 
-    global last_actuation_time
-    last_actuation_time = 0
+    self.sim = sim
+    self.simROS2 = simROS2
+
+    self.controller = Controller(sim, simROS2)
+
+    self.last_actuation_time = 0
 
     print("controller initialized")
 
@@ -734,19 +772,22 @@ def sysCall_nonSimulation():
 
 def sysCall_beforeSimulation():
 
-    global controller
-    controller = Controller()
+    sim = require('sim')
+    simROS2 = require('simROS2')
 
-    global last_actuation_time
-    last_actuation_time = 0
+    self.sim = sim
+    self.simROS2 = simROS2
+
+    self.controller = Controller(sim, simROS2)
+
+    self.last_actuation_time = 0
 
     # give zero-velocity command after start
-    cmd = HwApiVelocityHdgRateCmd()
-    cmd.velocity.x = 0.0
-    cmd.velocity.y = 0.0
-    cmd.velocity.z = 0.0
-    cmd.heading_rate = 0.0
-    controller.setVelocityCmd(cmd)
+    cmd = {
+        'velocity': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+        'heading_rate': 0.0,
+    }
+    self.controller.setVelocityCmd(cmd)
 
 # #} end of sysCall_beforeSimulation()
 
