@@ -34,7 +34,7 @@ set(LIBRARIES
 
 # Plugin
 
-add_library(MrsUavHwCoppeliaApi_Api
+add_library(MrsUavHwCoppeliaApi_Api SHARED
   src/api.cpp
 )
 
