@@ -1,47 +1,49 @@
-hw_interface_plugin: "mrs_uav_coppelia_api/Api"
+mrs_uav_hw_api:
 
-plugin:
+  hw_interface_plugin: "mrs_uav_coppelia_api/Api"
 
-  gnss:
-    utm_zone: "32T"
-    utm_x: 465710.758973
-    utm_y: 5249465.43086
-    amsl: 340.0
+  plugin:
 
-  input_mode:
-    actuators:             false
-    control_group:         false
-    attitude_rate:         true
-    attitude:              false
-    acceleration_hdg_rate: false
-    velocity_hdg_rate:     false
+    gnss:
+      utm_zone: "32T"
+      utm_x: 465710.758973
+      utm_y: 5249465.43086
+      amsl: 340.0
 
-  outputs:
-    ground_truth:         true
-    distance_sensor:      true
-    gnss:                 true
-    imu:                  true
-    altitude:             true
-    magnetometer_heading: true
-    rc_channels:          false
-    battery_state:        true
-    position:             true
-    orientation:          true
-    velocity:             true
-    angular_velocity:     true
-    odometry:             true
+    input_mode:
+      actuators:             false
+      control_group:         false
+      attitude_rate:         true
+      attitude:              false
+      acceleration_hdg_rate: false
+      velocity_hdg_rate:     false
 
-  topics:
-    prefix: "coppelia_simulator"
-    simulator:
-      # subscribers
-      imu: "imu"
-      odom: "odometry"
-      rangefinder: "rangefinder"
-      # publishers
-      actuators_cmd: "actuators_cmd"
-      control_group_cmd: "control_group_cmd"
-      attitude_rate_cmd: "attitude_rate_cmd"
-      attitude_cmd: "attitude_cmd"
-      acceleration_hdg_rate_cmd: "acceleration_hdg_rate_cmd"
-      velocity_hdg_rate_cmd: "velocity_hdg_rate_cmd"
+    outputs:
+      ground_truth:         true
+      distance_sensor:      true
+      gnss:                 true
+      imu:                  true
+      altitude:             true
+      magnetometer_heading: true
+      rc_channels:          false
+      battery_state:        true
+      position:             true
+      orientation:          true
+      velocity:             true
+      angular_velocity:     true
+      odometry:             true
+
+    topics:
+      prefix: "coppelia_simulator"
+      simulator:
+        # subscribers
+        imu: "imu"
+        odom: "odometry"
+        rangefinder: "rangefinder"
+        # publishers
+        actuators_cmd: "actuators_cmd"
+        control_group_cmd: "control_group_cmd"
+        attitude_rate_cmd: "attitude_rate_cmd"
+        attitude_cmd: "attitude_cmd"
+        acceleration_hdg_rate_cmd: "acceleration_hdg_rate_cmd"
+        velocity_hdg_rate_cmd: "velocity_hdg_rate_cmd"
