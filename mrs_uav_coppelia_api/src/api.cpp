@@ -164,8 +164,6 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
   _body_frame_name_  = common_handlers->getBodyFrameName();
   _world_frame_name_ = common_handlers->getWorldFrameName();
 
-  _capabilities_.api_name = "CoppeliaApi";
-
   // | ------------------- loading parameters ------------------- |
 
   std::shared_ptr<mrs_lib::ParamLoader> param_loader = common_handlers_->plugin_param_loader;
@@ -174,27 +172,6 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
   param_loader->loadParam("gnss/utm_y", _utm_y_);
   param_loader->loadParam("gnss/utm_zone", _utm_zone_);
   param_loader->loadParam("gnss/amsl", _amsl_);
-
-  param_loader->loadParam("input_mode/actuators", (bool&)_capabilities_.accepts_actuator_cmd);
-  param_loader->loadParam("input_mode/control_group", (bool&)_capabilities_.accepts_control_group_cmd);
-  param_loader->loadParam("input_mode/attitude_rate", (bool&)_capabilities_.accepts_attitude_rate_cmd);
-  param_loader->loadParam("input_mode/attitude", (bool&)_capabilities_.accepts_attitude_cmd);
-  param_loader->loadParam("input_mode/acceleration_hdg_rate", (bool&)_capabilities_.accepts_acceleration_hdg_rate_cmd);
-  param_loader->loadParam("input_mode/velocity_hdg_rate", (bool&)_capabilities_.accepts_velocity_hdg_rate_cmd);
-
-  param_loader->loadParam("outputs/ground_truth", (bool&)_capabilities_.produces_ground_truth);
-  param_loader->loadParam("outputs/distance_sensor", (bool&)_capabilities_.produces_distance_sensor);
-  param_loader->loadParam("outputs/gnss", (bool&)_capabilities_.produces_gnss);
-  param_loader->loadParam("outputs/imu", (bool&)_capabilities_.produces_imu);
-  param_loader->loadParam("outputs/altitude", (bool&)_capabilities_.produces_altitude);
-  param_loader->loadParam("outputs/magnetometer_heading", (bool&)_capabilities_.produces_magnetometer_heading);
-  param_loader->loadParam("outputs/rc_channels", (bool&)_capabilities_.produces_rc_channels);
-  param_loader->loadParam("outputs/battery_state", (bool&)_capabilities_.produces_battery_state);
-  param_loader->loadParam("outputs/position", (bool&)_capabilities_.produces_position);
-  param_loader->loadParam("outputs/orientation", (bool&)_capabilities_.produces_orientation);
-  param_loader->loadParam("outputs/velocity", (bool&)_capabilities_.produces_velocity);
-  param_loader->loadParam("outputs/angular_velocity", (bool&)_capabilities_.produces_angular_velocity);
-  param_loader->loadParam("outputs/odometry", (bool&)_capabilities_.produces_odometry);
 
   param_loader->loadParam("topics/prefix", _simulator_prefix_);
   param_loader->loadParam("topics/simulator/odom", _topic_simulator_odom_);
@@ -211,6 +188,21 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
     RCLCPP_ERROR(node_->get_logger(), "Could not load all parameters!");
     rclcpp::shutdown();
   }
+
+  // | ---------------------- capabilities ---------------------- |
+
+  // what is requested and implemented
+  _capabilities_          = common_handlers_->requested_capabilities;
+  _capabilities_.api_name = "CoppeliaApi";
+
+  _capabilities_.accepts_acceleration_hdg_cmd = false;
+  _capabilities_.accepts_velocity_hdg_cmd     = false;
+  _capabilities_.accepts_position_cmd         = false;
+
+  _capabilities_.produces_gnss_status    = false;
+  _capabilities_.produces_rtk            = false;
+  _capabilities_.produces_magnetic_field = false;
+  _capabilities_.produces_rc_rssi        = false;
 
   // | ----------------------- subscribers ---------------------- |
 
