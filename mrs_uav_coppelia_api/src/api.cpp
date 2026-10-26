@@ -164,7 +164,7 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
   _body_frame_name_  = common_handlers->getBodyFrameName();
   _world_frame_name_ = common_handlers->getWorldFrameName();
 
-  _capabilities_.api_name = "MrsSimulator";
+  _capabilities_.api_name = "CoppeliaApi";
 
   // | ------------------- loading parameters ------------------- |
 
