@@ -198,6 +198,7 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
   _capabilities_.accepts_acceleration_hdg_cmd = false;
   _capabilities_.accepts_velocity_hdg_cmd     = false;
   _capabilities_.accepts_position_cmd         = false;
+  _capabilities_.accepts_feedforward          = false;
 
   _capabilities_.produces_gnss_status    = false;
   _capabilities_.produces_rtk            = false;
