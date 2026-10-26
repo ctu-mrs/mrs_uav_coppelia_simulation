@@ -219,8 +219,10 @@ void Api::initialize(const rclcpp::Node::SharedPtr &node, std::shared_ptr<mrs_ua
   sh_odom_ = mrs_lib::SubscriberHandler<nav_msgs::msg::Odometry>(shopts, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_odom_,
                                                            &Api::callbackOdom, this);
 
-  sh_imu_ =
-      mrs_lib::SubscriberHandler<sensor_msgs::msg::Imu>(shopts, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_imu_, &Api::callbackImu, this);
+  if (_capabilities_.produces_imu) {
+    sh_imu_ = mrs_lib::SubscriberHandler<sensor_msgs::msg::Imu>(shopts, "/" + _simulator_prefix_ + "/" + _uav_name_ + "/" + _topic_simulator_imu_,
+                                                                &Api::callbackImu, this);
+  }
 
   // | ----------------------- publishers ----------------------- |
 
@@ -665,10 +667,7 @@ void Api::callbackImu(const sensor_msgs::msg::Imu::ConstSharedPtr msg) {
 
   RCLCPP_INFO_ONCE(node_->get_logger(), "getting IMU");
 
-  if (_capabilities_.produces_imu) {
-
-    common_handlers_->publishers.publishIMU(*msg);
-  }
+  common_handlers_->publishers.publishIMU(*msg);
 }
 
 //}
