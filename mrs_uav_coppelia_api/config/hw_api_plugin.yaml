@@ -1,29 +1,31 @@
-hw_interface_plugin: "mrs_uav_coppelia_api/Api"
+mrs_uav_hw_api:
 
-plugin:
+  hw_interface_plugin: "mrs_uav_coppelia_api/Api"
 
-  gnss:
-    utm_zone: "32T"
-    utm_x: 465710.758973
-    utm_y: 5249465.43086
-    amsl: 340.0
-
-  input_mode:
+  inputs:
     actuators:             false
     control_group:         false
     attitude_rate:         true
     attitude:              false
     acceleration_hdg_rate: false
+    acceleration_hdg:      false # not supported
     velocity_hdg_rate:     false
+    velocity_hdg:          false # not supported
+    position:              false # not supported
+    feedforward:           false # not supported
 
   outputs:
-    ground_truth:         true
     distance_sensor:      true
     gnss:                 true
+    gnss_status:          false # not supported
+    rtk:                  false # not supported
+    ground_truth:         true
     imu:                  true
     altitude:             true
     magnetometer_heading: true
+    magnetic_field:       false # not supported
     rc_channels:          false
+    rc_rssi:              false # not supported
     battery_state:        true
     position:             true
     orientation:          true
@@ -31,17 +33,25 @@ plugin:
     angular_velocity:     true
     odometry:             true
 
-  topics:
-    prefix: "coppelia_simulator"
-    simulator:
-      # subscribers
-      imu: "imu"
-      odom: "odometry"
-      rangefinder: "rangefinder"
-      # publishers
-      actuators_cmd: "actuators_cmd"
-      control_group_cmd: "control_group_cmd"
-      attitude_rate_cmd: "attitude_rate_cmd"
-      attitude_cmd: "attitude_cmd"
-      acceleration_hdg_rate_cmd: "acceleration_hdg_rate_cmd"
-      velocity_hdg_rate_cmd: "velocity_hdg_rate_cmd"
+  plugin:
+
+    gnss:
+      utm_zone: "32T"
+      utm_x: 465710.758973
+      utm_y: 5249465.43086
+      amsl: 340.0
+
+    topics:
+      prefix: "coppelia_simulator"
+      simulator:
+        # subscribers
+        imu: "imu"
+        odom: "odometry"
+        rangefinder: "rangefinder"
+        # publishers
+        actuators_cmd: "actuators_cmd"
+        control_group_cmd: "control_group_cmd"
+        attitude_rate_cmd: "attitude_rate_cmd"
+        attitude_cmd: "attitude_cmd"
+        acceleration_hdg_rate_cmd: "acceleration_hdg_rate_cmd"
+        velocity_hdg_rate_cmd: "velocity_hdg_rate_cmd"
