@@ -283,11 +283,10 @@ mrs_msgs::msg::HwApiStatus Api::getStatus() {
 
   mrs_msgs::msg::HwApiStatus status;
 
-  status.stamp = clock_->now();
-
   {
     std::scoped_lock lock(mutex_status_);
 
+    status.stamp     = clock_->now();
     status.armed     = armed_;
     status.offboard  = offboard_;
     status.connected = connected_;
